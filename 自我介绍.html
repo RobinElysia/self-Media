@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ByteZen - Profile Slides</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Italianno&family=Noto+Serif+SC:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* =========================================
+   1. Design Tokens (ReZenKi Visual Style)
+   ========================================= */
+:root {
+  --color-paper: #F4F1EA;
+  --color-paper-deep: #EBE7DD;
+  --color-ink: #2B2926;
+  --color-muted: #7A756D;
+  --color-line: #D6D1C4;
+  
+  --font-script: 'Italianno', cursive;
+  --font-serif: 'EB Garamond', 'Noto Serif SC', 'Songti SC', serif;
+  --font-sans: system-ui, -apple-system, sans-serif;
+  
+  --spacing-unit: 1rem;
+  --transition-slow: 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* =========================================
+   2. Base & Reset
+   ========================================= */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-serif);
+  -webkit-font-smoothing: antialiased;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.03;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* =========================================
+   3. Layout & Slides Container
+   ========================================= */
+.slides-viewport { width: 100%; height: 100%; position: relative; overflow: hidden; }
+
+.slide {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start; 
+  align-items: stretch;
+  padding: calc(var(--spacing-unit) * 5) calc(var(--spacing-unit) * 4) calc(var(--spacing-unit) * 3);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(16px);
+  transition: opacity var(--transition-slow), transform var(--transition-slow), visibility 0s linear 0.8s;
+}
+
+.slide.active {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  transition: opacity var(--transition-slow), transform var(--transition-slow), visibility 0s linear 0s;
+}
+
+.slide-content {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--spacing-unit) * 2.5);
+  /* 关键：让内容区撑满高度，避免项目页底部空白过多 */
+  flex: 1; 
+}
+
+/* =========================================
+   4. Typography & Components
+   ========================================= */
+.meta-label {
+  font-size: 0.7rem;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  font-family: var(--font-sans);
+  font-weight: 500;
+  margin-bottom: calc(var(--spacing-unit) * 0.5);
+}
+
+.text-script {
+  font-family: var(--font-script);
+  font-size: clamp(4.5rem, 14vw, 8rem);
+  line-height: 0.9;
+  color: var(--color-ink);
+  margin: calc(var(--spacing-unit) * 1) 0;
+}
+
+.text-title { font-size: clamp(1.8rem, 6vw, 2.5rem); font-weight: 600; line-height: 1.2; }
+.text-body { font-size: clamp(1.05rem, 3.8vw, 1.25rem); line-height: 1.9; }
+.text-muted { color: var(--color-muted); }
+
+.divider { width: 60px; height: 1px; background-color: var(--color-line); margin: calc(var(--spacing-unit) * 0.5) 0; }
+
+.quote-block {
+  border-left: 2px solid var(--color-line);
+  padding-left: calc(var(--spacing-unit) * 2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-unit);
+}
+.quote-author { font-weight: 600; font-style: italic; margin-bottom: 0.25rem; font-size: 1.1rem; }
+
+.list-archive { list-style: none; display: flex; flex-direction: column; gap: calc(var(--spacing-unit) * 1.5); }
+.list-archive li { display: flex; align-items: baseline; gap: var(--spacing-unit); line-height: 1.7; }
+.list-archive li::before { content: "—"; color: var(--color-muted); flex-shrink: 0; }
+
+.link-archive {
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  color: var(--color-ink);
+  text-decoration: none;
+  border-bottom: 1px solid var(--color-line);
+  padding-bottom: 2px;
+  transition: border-color 0.3s ease;
+  word-break: break-all;
+}
+.link-archive:hover, .link-archive:focus { border-color: var(--color-ink); outline: none; }
+
+/* =========================================
+   5. Project Grid (已修复：统一大小)
+   ========================================= */
+.project-grid {
+  display: grid;
+  /* 强制3列等宽分布 */
+  grid-template-columns: repeat(3, 1fr); 
+  gap: calc(var(--spacing-unit) * 1.2);
+  margin-top: calc(var(--spacing-unit) * 1);
+  /* 让网格占据剩余空间，保证卡片高度一致 */
+  flex: 1; 
+}
+
+.project-item {
+  border: 1px solid var(--color-line);
+  padding: calc(var(--spacing-unit) * 1.5);
+  background: var(--color-paper-deep);
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--spacing-unit) * 0.5);
+  transition: border-color 0.3s ease;
+  /* 确保所有卡片等高 */
+  height: 65%; 
+}
+.project-item:hover, .project-item:focus-within { border-color: var(--color-ink); }
+
+.project-index { font-family: var(--font-sans); font-size: 0.65rem; color: var(--color-muted); letter-spacing: 0.15em; }
+.project-name { font-size: 1rem; font-weight: 600; line-height: 1.3; }
+.project-desc { 
+  font-size: 0.8rem; 
+  color: var(--color-muted); 
+  font-style: italic; 
+  line-height: 1.5; 
+  /* 描述文字自动撑开，把链接推到底部 */
+  flex: 1; 
+}
+.project-link { 
+  font-family: var(--font-sans); 
+  font-size: 0.7rem; 
+  color: var(--color-muted); 
+  text-decoration: none; 
+  border-bottom: 1px solid transparent; 
+  transition: all 0.3s ease; 
+  word-break: break-all;
+  margin-top: auto;
+}
+.project-link:hover { color: var(--color-ink); border-color: var(--color-ink); }
+
+/* =========================================
+   6. Indicator & Hint
+   ========================================= */
+.slide-indicator {
+  position: absolute;
+  bottom: calc(var(--spacing-unit) * 2.5);
+  right: calc(var(--spacing-unit) * 4);
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  color: var(--color-muted);
+  letter-spacing: 0.2em;
+}
+
+.fullscreen-hint {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  color: var(--color-muted);
+  background: var(--color-paper-deep);
+  padding: 8px 20px;
+  border: 1px solid var(--color-line);
+  opacity: 0;
+  transition: opacity 0.5s ease;
+  pointer-events: none;
+  z-index: 100;
+  white-space: nowrap;
+}
+.fullscreen-hint.show { opacity: 1; }
+
+/* =========================================
+   7. Accessibility & Responsive
+   ========================================= */
+:focus-visible { outline: 2px solid var(--color-ink); outline-offset: 4px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .slide { transition: opacity 0.2s ease, visibility 0s linear 0.2s; transform: none !important; }
+  .slide.active { transition: opacity 0.2s ease, visibility 0s linear 0s; transform: none !important; }
+}
+
+/* 移动端适配：项目网格变单列 */
+@media (max-width: 600px) {
+  .slide { padding: calc(var(--spacing-unit) * 4) calc(var(--spacing-unit) * 2) calc(var(--spacing-unit) * 2); }
+  .slide-content { max-width: 100%; }
+  .project-grid { grid-template-columns: 1fr; }
+  .slide-indicator { right: calc(var(--spacing-unit) * 2); bottom: calc(var(--spacing-unit) * 1.5); }
+  .text-script { font-size: clamp(3.5rem, 16vw, 5rem); }
+}
+
+/* =========================================
+   Centered Composition — 仅调整视觉重心
+   保持原有尺寸与布局
+   ========================================= */
+.slide {
+  justify-content: center;
+  align-items: center;
+}
+
+.slide-content {
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+  align-items: center;
+}
+
+.divider {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.quote-block {
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+}
+
+.list-archive {
+  align-items: center;
+}
+
+.list-archive li {
+  justify-content: center;
+}
+
+.project-grid {
+  width: 100%;
+}
+
+.project-item {
+  text-align: center;
+  align-items: center;
+}
+
+.project-link {
+  align-self: center;
+}
+
+.slide-indicator {
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+}
+
+@media (max-width: 600px) {
+  .slide-content {
+    width: 100%;
+  }
+
+  .project-grid {
+    width: 100%;
+  }
+
+  .list-archive li {
+    justify-content: center;
+  }
+}
+
+</style>
+</head>
+<body>
+
+<div class="slides-viewport" id="viewport">
+  
+  <!-- Slide 1: 引言 -->
+  <section class="slide active" aria-label="引言">
+    <div class="slide-content">
+      <span class="meta-label">Prologue / 序言</span>
+      <div class="divider"></div>
+      
+      <div class="quote-block">
+        <div>
+          <div class="quote-author">Jordan</div>
+          <p class="text-body text-muted">"I think it's science fiction, and I think science fiction is important for society, but at the level it's being promoted, and with those kinds of voices, it's really hurting 25- and 20-year-olds."</p>
+        </div>
+        <p class="text-body">"我认为这属于科幻。我认为科幻对社会很重要，但以这种方式被推广、由这些声音来推广，实际上正在严重伤害那些二十五岁、二十岁的年轻人。"</p>
+      </div>
+
+      <div class="divider" style="margin: 2rem 0;"></div>
+
+      <div class="quote-block">
+        <div>
+          <div class="quote-author">Me</div>
+          <p class="text-body">我们不需要什么 AGI 带来的弥赛亚时刻，不需要所谓的"铲子"带来的表面收益和营销。</p>
+          <p class="text-body text-muted" style="margin-top: 0.75rem;">我们只需要应用生活，提高效率，仅此而已......</p>
+        </div>
+      </div>
+    </div>
+    <div class="slide-indicator"><span class="current-page">1</span> / <span class="total-pages">4</span></div>
+  </section>
+
+  <!-- Slide 2: 自我介绍 -->
+  <section class="slide" aria-label="个人简介">
+    <div class="slide-content">
+      <span class="meta-label">Profile / 档案</span>
+      <h1 class="text-script">ByteZen</h1>
+      <div class="divider"></div>
+
+      <div style="display: flex; flex-direction: column; gap: 2rem; margin-top: 1rem;">
+        <div>
+          <span class="meta-label">Experience / 经历</span>
+          <p class="text-body">前 ICStudio 成员、智软工作室技术负责人</p>
+          <p class="text-body">现衍界 AI 实验室成员、上海势曦苑科技有限公司员工一枚</p>
+        </div>
+        
+        <div>
+          <span class="meta-label">Honors / 荣誉与贡献</span>
+          <ul class="list-archive text-body">
+            <li>中国大学生服务外包创新创业大赛国三</li>
+            <li>米哈游个人开发者纪念</li>
+            <li>Spring AI 贡献提名</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="slide-indicator"><span class="current-page">2</span> / <span class="total-pages">4</span></div>
+  </section>
+
+  <!-- Slide 3: 项目合集（已修复为统一大小） -->
+  <section class="slide" aria-label="项目图录">
+    <div class="slide-content">
+      <span class="meta-label">Archive / 项目图录</span>
+      <h2 class="text-title">Selected Works</h2>
+      <div class="divider"></div>
+
+      <div class="project-grid">
+        <!-- 项目1 -->
+        <article class="project-item">
+          <span class="project-index">NO. 01</span>
+          <h3 class="project-name">个人博客项目</h3>
+          <p class="project-desc">数字花园，沉淀技术与思考</p>
+          <a href="https://github.com/RobinElysia/RobinElysia_Blog" target="_blank" rel="noopener noreferrer" class="project-link">GitHub ↗</a>
+        </article>
+
+        <!-- 项目2 -->
+        <article class="project-item">
+          <span class="project-index">NO. 02</span>
+          <h3 class="project-name">Agent-Contuctor</h3>
+          <p class="project-desc">上交大多智能体协作复现</p>
+          <a href="https://github.com/RobinElysia/Agent-Contuctor" target="_blank" rel="noopener noreferrer" class="project-link">GitHub ↗</a>
+        </article>
+
+        <!-- 项目3 -->
+        <article class="project-item">
+          <span class="project-index">NO. 03</span>
+          <h3 class="project-name">植保无人机平台</h3>
+          <p class="project-desc">笨拙但真诚的 Vibe coding</p>
+          <a href="https://github.com/RobinElysia/agricultural-drone-platform" target="_blank" rel="noopener noreferrer" class="project-link">GitHub ↗</a>
+        </article>
+
+        <!-- 项目4 -->
+        <article class="project-item">
+          <span class="project-index">NO. 04</span>
+          <h3 class="project-name">Python ML Pipeline</h3>
+          <p class="project-desc">数据处理到模型微调封装</p>
+          <a href="https://github.com/RobinElysia/PythonLibAction" target="_blank" rel="noopener noreferrer" class="project-link">GitHub ↗</a>
+        </article>
+
+        <!-- 项目5 -->
+        <article class="project-item">
+          <span class="project-index">NO. 05</span>
+          <h3 class="project-name">Go-OJ Docker 沙盒</h3>
+          <p class="project-desc">安全隔离的代码执行环境</p>
+          <a href="https://github.com/RobinElysia/LNCCOJ" target="_blank" rel="noopener noreferrer" class="project-link">GitHub ↗</a>
+        </article>
+
+        <!-- 项目6：现在与其他项目完全等大 -->
+        <article class="project-item">
+          <span class="project-index">NO. 06</span>
+          <h3 class="project-name">Java/Python 文档集</h3>
+          <p class="project-desc">个人知识体系与技术第二大脑</p>
+          <a href="https://hcnxcb6dq341.feishu.cn/docx/BgV7d6F1kozzWJx4SqYcfzxOnVf" target="_blank" rel="noopener noreferrer" class="project-link">飞书文档 ↗</a>
+        </article>
+      </div>
+    </div>
+    <div class="slide-indicator"><span class="current-page">3</span> / <span class="total-pages">4</span></div>
+  </section>
+
+  <!-- Slide 4: 尾声与链接 -->
+  <section class="slide" aria-label="后续分享与联系">
+    <div class="slide-content">
+      <span class="meta-label">Epilogue / 尾声</span>
+      <h2 class="text-title">What's Next</h2>
+      <div class="divider"></div>
+      
+      <p class="text-body text-muted" style="margin-top: 1rem;">AI、Agent、方法论、拓展思考......</p>
+
+      <div style="margin-top: 3rem;">
+        <span class="meta-label">Connect / 建立连接</span>
+        <ul class="list-archive text-body" style="margin-top: 1rem;">
+          <li>
+            <span style="min-width: 70px; color: var(--color-muted);">Github</span> 
+            <a href="https://github.com/RobinElysia" target="_blank" rel="noopener noreferrer" class="link-archive">github.com/RobinElysia</a>
+          </li>
+          <li>
+            <span style="min-width: 70px; color: var(--color-muted);">知乎</span> 
+            <a href="https://www.zhihu.com/people/qwp-78-80" target="_blank" rel="noopener noreferrer" class="link-archive">zhihu.com/people/qwp-78-80</a>
+          </li>
+        </ul>
+      </div>
+
+      <div style="margin-top: auto; padding-top: 3rem;">
+        <p class="text-script" style="font-size: clamp(3rem, 10vw, 5rem);">ByteZen</p>
+      </div>
+    </div>
+    <div class="slide-indicator"><span class="current-page">4</span> / <span class="total-pages">4</span></div>
+  </section>
+
+</div>
+
+<div class="fullscreen-hint" id="fsHint">按 A 全屏 · Esc 退出 · ← → 翻页</div>
+
+<script>
+(function() {
+  'use strict';
+
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const totalPages = slides.length;
+  let currentIndex = 0;
+  let isTransitioning = false;
+
+  function updateIndicators() {
+    document.querySelectorAll('.current-page').forEach(el => el.textContent = currentIndex + 1);
+    document.querySelectorAll('.total-pages').forEach(el => el.textContent = totalPages);
+  }
+
+  function goToSlide(index) {
+    if (index < 0 || index >= totalPages || index === currentIndex || isTransitioning) return;
+    isTransitioning = true;
+    slides[currentIndex].classList.remove('active');
+    currentIndex = index;
+    slides[currentIndex].classList.add('active');
+    updateIndicators();
+    setTimeout(() => { isTransitioning = false; }, 600);
+  }
+
+  function nextSlide() { goToSlide(currentIndex + 1); }
+  function prevSlide() { goToSlide(currentIndex - 1); }
+
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen();
+    }
+  }
+
+  const hint = document.getElementById('fsHint');
+  let hintTimeout;
+  function showHint() {
+    hint.classList.add('show');
+    clearTimeout(hintTimeout);
+    hintTimeout = setTimeout(() => hint.classList.remove('show'), 3000);
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    switch(e.key) {
+      case 'ArrowRight': case 'ArrowDown': case ' ':
+        e.preventDefault(); nextSlide(); break;
+      case 'ArrowLeft': case 'ArrowUp':
+        e.preventDefault(); prevSlide(); break;
+      case 'a': case 'A':
+        if (!e.ctrlKey && !e.metaKey) { e.preventDefault(); toggleFullscreen(); }
+        break;
+    }
+  });
+
+  let touchStartX = 0;
+  const viewport = document.getElementById('viewport');
+  viewport.addEventListener('touchstart', (e) => { touchStartX = e.changedTouches[0].screenX; }, { passive: true });
+  viewport.addEventListener('touchend', (e) => {
+    const diff = touchStartX - e.changedTouches[0].screenX;
+    if (Math.abs(diff) > 50) { diff > 0 ? nextSlide() : prevSlide(); }
+  }, { passive: true });
+
+  updateIndicators();
+  showHint();
+})();
+</script>
+</body>
+</html>
