@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ChatBox → Agent · 从聊天到自主执行</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500;600&family=Noto+Serif+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#f4f1ea;--paper-deep:#ebe7dd;--ink:#2b2926;--muted:#7a756d;--line:#d6d1c4;
+  --accent:#4f718f;--accent-soft:#dce6ee;--orange:#a36c44;--green:#687c68;--violet:#756a88;
+  --serif:'EB Garamond','Noto Serif SC','Songti SC',serif;
+  --sans:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --ease:.72s cubic-bezier(.25,.46,.45,.94)
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--paper);color:var(--ink)}
+body{font-family:var(--serif);-webkit-font-smoothing:antialiased}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;z-index:50;opacity:.026;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='.8' numOctaves='3' stitchTiles='stitch' type='fractalNoise'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+.viewport{position:relative;width:100%;height:100%;overflow:hidden}
+.slide{position:absolute;inset:0;display:grid;place-items:center;padding:clamp(30px,6vh,78px) clamp(22px,5vw,88px);opacity:0;visibility:hidden;transform:translateY(18px) scale(.987);transition:opacity var(--ease),transform var(--ease),visibility 0s linear .72s}
+.slide.active{opacity:1;visibility:visible;transform:none;transition:opacity var(--ease),transform var(--ease),visibility 0s linear 0s}
+.content{width:min(1180px,92vw);max-height:89vh;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:clamp(16px,2.4vh,28px)}
+.kicker{font:600 .66rem/1 var(--sans);letter-spacing:.3em;color:var(--muted);text-transform:uppercase}
+.title{font-size:clamp(2.45rem,5.4vw,4.7rem);line-height:1.04;font-weight:600;letter-spacing:-.028em}
+.title.small{font-size:clamp(1.95rem,3.8vw,3.35rem)}
+.lead{font-size:clamp(1.08rem,1.9vw,1.46rem);line-height:1.72;color:var(--muted);max-width:930px}
+.body{font-size:clamp(1rem,1.4vw,1.18rem);line-height:1.86}
+.muted{color:var(--muted)}
+.divider{width:82px;height:1px;background:var(--line)}
+.source{font:500 .58rem/1.4 var(--sans);letter-spacing:.05em;color:#999289;max-width:930px}
+.hero-mark{width:98px;height:98px;border:1px solid var(--line);display:grid;place-items:center;transform:rotate(45deg)}
+.hero-mark span{transform:rotate(-45deg);font:600 1.35rem var(--serif);letter-spacing:-.06em}
+.two-col{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;width:min(100%,980px);text-align:left}
+.three-col{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;width:min(100%,1080px);text-align:left}
+.card{border:1px solid var(--line);background:rgba(235,231,221,.48);padding:22px 23px}
+.card .card-num{font:600 .62rem var(--sans);letter-spacing:.18em;color:var(--muted);margin-bottom:10px}
+.card h3{font-size:1.18rem;font-weight:600;margin-bottom:8px}
+.card p{font-size:.94rem;line-height:1.68;color:var(--muted)}
+.stack{display:flex;flex-direction:column;gap:11px;width:min(100%,920px)}
+.row{display:grid;grid-template-columns:150px 1fr;align-items:center;gap:16px;text-align:left}
+.row .label{font:600 .67rem var(--sans);letter-spacing:.12em;color:var(--muted);text-transform:uppercase}
+.row .value{font-size:1.05rem;line-height:1.48;padding:11px 15px;border:1px solid var(--line);background:rgba(255,255,255,.18)}
+.loop{width:min(100%,940px);display:grid;grid-template-columns:repeat(4,1fr);gap:10px;position:relative}
+.loop:before{content:"";position:absolute;left:9%;right:9%;top:50%;border-top:1px dashed var(--line);z-index:-1}
+.step{background:var(--paper);border:1px solid var(--line);padding:20px 12px;text-align:center}
+.step b{display:block;font:600 .64rem var(--sans);letter-spacing:.13em;color:var(--muted);margin-bottom:7px}.step span{font-size:1.03rem}
+.flow{width:min(100%,1040px);display:flex;align-items:stretch;justify-content:center;gap:9px}
+.flow .box{flex:1;border:1px solid var(--line);padding:20px 13px;background:rgba(255,255,255,.14)}
+.flow .box b{display:block;font-size:1rem;margin-bottom:7px}.flow .box span{font:.74rem/1.5 var(--sans);color:var(--muted)}
+.badge{display:inline-flex;align-items:center;gap:8px;padding:7px 11px;border:1px solid var(--line);font:600 .65rem var(--sans);letter-spacing:.08em;color:var(--muted)}
+.badge i{width:7px;height:7px;border-radius:50%;background:currentColor;display:block}
+.compare{width:min(100%,1040px);display:grid;grid-template-columns:1fr 1fr;gap:15px;text-align:left}
+.compare>div{border:1px solid var(--line);padding:22px 24px;background:rgba(255,255,255,.07)}
+.compare h3{font-size:1.18rem;margin-bottom:11px}.compare p{font-size:.95rem;line-height:1.72;color:var(--muted)}
+.grid-5{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;width:min(100%,1120px);text-align:left}
+.provider{border:1px solid var(--line);min-height:190px;padding:18px 16px;display:flex;flex-direction:column;gap:9px;background:rgba(255,255,255,.08)}
+.provider .brand,.agent .brand{display:flex;align-items:center;gap:10px;font:600 .73rem var(--sans);letter-spacing:.06em}
+.logo{width:34px;height:34px;border:1px solid var(--line);display:grid;place-items:center;background:var(--paper-deep);font:700 .72rem var(--sans);color:var(--ink);flex-shrink:0}
+.provider h3{font-size:1.03rem}.provider p{font-size:.82rem;line-height:1.62;color:var(--muted)}
+.axis{display:grid;grid-template-columns:repeat(3,1fr);gap:13px;width:min(100%,980px);text-align:left}
+.axis .item{border-top:2px solid var(--line);padding-top:13px}.axis b{font:600 .66rem var(--sans);letter-spacing:.12em;color:var(--muted)}.axis p{margin-top:6px;font-size:.92rem;line-height:1.65;color:var(--muted)}
+.agents{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px;width:min(100%,1060px);text-align:left}
+.agent{border:1px solid var(--line);padding:18px 18px 16px;background:rgba(235,231,221,.42);min-height:145px;display:flex;flex-direction:column;gap:9px}
+.agent h3{font-size:1.05rem}.agent p{font-size:.83rem;line-height:1.6;color:var(--muted)}
+.terminal{width:min(100%,920px);background:#232321;color:#ece8de;border:1px solid #47453f;box-shadow:0 16px 36px rgba(0,0,0,.08);text-align:left;padding:22px 24px;font:500 .86rem/1.72 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.terminal .dim{color:#96948e}.terminal .cmd{color:#f0d7af}.terminal .green{color:#bbd0b0}.terminal .blue{color:#c5d7e6}.terminal .orange{color:#e4b78e}
+.command-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;width:min(100%,970px);text-align:left}
+.command{border:1px solid var(--line);padding:16px 17px}.command code{font:600 .87rem ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}.command p{margin-top:6px;font-size:.82rem;line-height:1.55;color:var(--muted)}
+.emph{display:inline-block;padding:2px 7px;background:var(--accent-soft);color:#35516a}
+.process{display:grid;grid-template-columns:repeat(5,1fr);gap:9px;width:min(100%,1080px)}
+.process div{border-top:2px solid var(--line);padding-top:12px;text-align:left}.process b{font:600 .65rem var(--sans);letter-spacing:.1em;color:var(--muted)}.process p{margin-top:6px;font-size:.86rem;line-height:1.58}
+.note{max-width:850px;color:var(--muted);font: .88rem/1.72 var(--sans)}
+.nav{position:fixed;right:30px;bottom:24px;font:600 .68rem var(--sans);letter-spacing:.16em;color:var(--muted);z-index:60}
+.hint{position:fixed;left:50%;bottom:21px;transform:translateX(-50%);padding:8px 15px;border:1px solid var(--line);background:rgba(235,231,221,.92);font:.65rem var(--sans);letter-spacing:.07em;color:var(--muted);opacity:0;pointer-events:none;transition:opacity .35s;z-index:70;white-space:nowrap}.hint.show{opacity:1}
+@media(max-width:900px){.grid-5{grid-template-columns:repeat(3,1fr)}.agents{grid-template-columns:repeat(2,1fr)}.three-col{grid-template-columns:1fr 1fr}.process{grid-template-columns:1fr 1fr 1fr}.command-grid{grid-template-columns:1fr 1fr}.provider{min-height:0}}
+@media(max-width:700px){.slide{padding:22px 17px 50px}.content{width:95vw;max-height:91vh;gap:15px}.two-col,.compare,.three-col,.axis,.agents,.command-grid{grid-template-columns:1fr}.grid-5{grid-template-columns:1fr 1fr}.loop{grid-template-columns:1fr 1fr}.loop:before{display:none}.flow{flex-direction:column}.process{grid-template-columns:1fr 1fr}.row{grid-template-columns:1fr;gap:5px}.title{font-size:clamp(2.05rem,10vw,3.15rem)}.title.small{font-size:clamp(1.75rem,8vw,2.55rem)}.lead{font-size:1rem;line-height:1.65}.nav{right:16px}.source{font-size:.53rem}.terminal{font-size:.74rem;padding:17px}.provider{padding:15px}}
+@media(prefers-reduced-motion:reduce){.slide{transition:opacity .2s}.slide.active{transition:opacity .2s;transform:none}}
+</style>
+</head>
+<body>
+<div class="viewport" id="viewport">
+
+<section class="slide active"><div class="content">
+  <div class="hero-mark"><span>AI</span></div><div class="kicker">From ChatBox to Agent</div>
+  <h1 class="title">从聊天，到自主执行</h1><div class="divider"></div>
+  <p class="lead">理解 ChatBox、Agent、模型 API、框架、MCP、Skills，以及真正高效使用 Agent 的工程方法。</p>
+  <div class="note">从“问模型”开始，最后走向“让模型参与完成任务”。</div>
+</div><div class="nav">01 / 20</div></section>
+
+<section class="slide"><div class="content">
+  <div class="kicker">01 · ChatBox</div><h2 class="title small">什么是 ChatBox？</h2><div class="divider"></div>
+  <p class="lead">一个看起来只是聊天的界面，本质上是在管理人与模型之间的一段上下文。</p>
+  <div class="two-col">
+    <div class="card"><div class="card-num">01 · UI</div><h3>聊天界面</h3><p>用户输入问题，系统组织消息、历史记录、系统指令和附件，再把它们交给模型。</p></div>
+    <div class="card"><div class="card-num">02 · ENGINEERING</div><h3>上下文工程</h3><p>决定模型此刻“知道什么”。消息顺序、历史、文件、检索结果都会改变它的判断空间。</p></div>
+  </div>
+  <div class="badge"><i></i> ChatBox：主要目标是生成回答</div>
+</div><div class="nav">02 / 20</div></section>
+
+<section class="slide"><div class="content">
+  <div class="kicker">02 · Context & Prompt</div><h2 class="title small">上下文工程 + Prompt 工程</h2><div class="divider"></div>
+  <div class="stack">
+    <div class="row"><div class="label">Prompt</div><div class="value">定义模型应该如何工作：角色、目标、约束、输出格式。</div></div>
+    <div class="row"><div class="label">Context</div><div class="value">提供模型当前需要知道的事实：历史、文件、工具结果、项目状态。</div></div>
+    <div class="row"><div class="label">Memory</div><div class="value">把值得跨轮次保留的信息，从临时对话中抽离出来。</div></div>
+  </div>
+  <p class="note">Prompt 解决“怎么做”；Context 解决“依据什么做”。Agent 工程首先就是管理这两个东西。</p>
+</div><div class="nav">03 / 20</div></section>
+
+<section class="slide"><div class="content">
+  <div class="kicker">03 · Agent</div><h2 class="title small">什么是 Agent？</h2><div class="divider"></div>
+  <p class="lead">一种能够调用模型 API，并围绕目标进行“观察 → 决策 → 操作 → 再观察”的应用系统。</p>
+  <div class="loop">
+    <div class="step"><b>OBSERVE</b><span>读取当前状态</span></div><div class="step"><b>DECIDE</b><span>决定下一步</span></div>
+    <div class="step"><b>ACT</b><span>调用工具执行</span></div><div class="step"><b>VERIFY</b><span>检查结果</span></div>
+  </div>
+  <div class="badge"><i></i> Agent = Model + Context + Tools + Loop</div>
+</div><div class="nav">04 / 20</div></section>
+
+<section class="slide"><div class="content">
+  <div class="kicker">04 · Model API</div><h2 class="title small">什么是“大模型厂商 API”？</h2><div class="divider"></div>
+  <div class="flow">
+    <div class="box"><b>你的程序</b><span>Agent / ChatBox</span></div><div class="box"><b>API 请求</b><span>鉴权 · 输入 · 工具定义</span></div>
+    <div class="box"><b>模型推理</b><span>理解 · 生成 · Tool Call</span></div><div class="box"><b>返回结果</b><span>文本 / JSON / 工具调用</span></div>
+  </div>
+  <p class="note">API 是模型能力的“程序化入口”，不是 Agent 本身。真正的自主性来自你在 API 外围建立的执行循环。</p>
+</div><div class="nav">05 / 20</div></section>
+
+<section class="slide"><div class="content">
+  <div class="kicker">05 · Providers</div><h2 class="title small">代表性模型厂商：它们都在提供什么？</h2><div class="divider"></div>
+  <div class="grid-5">
+    <div class="provider"><div class="brand"><div class="logo">O</div>OPENAI</div><h3>Responses / Agents</h3><p>OpenAI 的 API 提供 Responses 等调用路径，并可挂接 web search、file search、function calling、MCP 等工具；2026 年还推出了基于 Codex harness 的 Agents API 公测。</p></div>
+    <div class="provider"><div class="brand"><div class="logo">C</div>ANTHROPIC</div><h3>Messages + Tools</h3><p>Anthropic 的 Messages API 原生支持工具使用；工具既可以由客户端执行，也可以使用 Anthropic 提供的服务端工具。</p></div>
+    <div class="provider"><div class="brand"><div class="logo">✦</div>GOOGLE</div><h3>Gemini API</h3><p>Gemini API 同时覆盖多模态、Function Calling、内置工具和超长上下文；官方把 Interactions 作为面向 agentic workflows 的推荐原语。</p></div>
+    <div class="provider"><div class="brand"><div class="logo">DS</div>DEEPSEEK</div><h3>Tool Calls</h3><p>DeepSeek 提供 Chat / Responses 路径、Tool Calls 与结构化输出，并支持思考模式下的多轮工具调用。</p></div>
+    <div class="provider"><div class="brand"><div class="logo">Q</div>QWEN</div><h3>DashScope / OpenAI-compatible</h3><p>阿里云百炼提供 Qwen 模型 API，同时提供 OpenAI-compatible 接口；Qwen 支持 Function Calling、多工具并行等能力。</p></div>
+  </div>
+  <div class="source">资料依据：OpenAI / Anthropic / Google Gemini / DeepSeek / Alibaba Cloud 官方开发文档，2026-09。</div>
+</div><div class="nav">06 / 20</div></section>
+
+<section class="slide"><div class="content">
+  <div class="kicker">06 · Same Idea, Different Interfaces</div><h2 class="title small">API 很像，但“接口哲学”并不完全一样</h2><div class="divider"></div>
+  <div class="axis">
+    <div class="item"><b>MODEL CALL</b><p>最基础：把输入交给模型，拿回文本或结构化输出。</p></div>
+    <div class="item"><b>TOOL CALL</b><p>模型返回一个函数 / 工具调用请求，由你的程序执行，再把结果送回模型。</p></div>
+    <div class="item"><b>AGENT RUNTIME</b><p>进一步把“多轮调用、状态、工具、上下文、停止条件”封装成更高层 runtime。</p></div>
+  </div>
+  <div class="terminal"><span class="dim">// 一个典型 Agent 请求</span><br><span class="blue">input</span> → <span class="orange">model</span> → <span class="green">tool_call</span> → <span class="orange">tool result</span> → <span class="orange">model</span> → <span class="green">final</span></div>
+  <p class="source">不同厂商在 API 结构、工具定义、状态管理和内置工具上存在差异；做跨厂商 Agent 时，需要以具体 provider 文档为准。</p>
+</div><div class="nav">07 / 20</div></section>
+
+<section class="slide"><div class="content">
+  <div class="kicker">07 · Autonomy</div><h2 class="title small">“自主探索和操作”到底怎么来的？</h2><div class="divider"></div>
+  <div class="process">
+    <div><b>01 · GOAL</b><p>给目标，不给完整答案。</p></div><div><b>02 · STATE</b><p>暴露文件、环境和当前状态。</p></div><div><b>03 · TOOL</b><p>赋予搜索、Shell、代码等能力。</p></div><div><b>04 · LOOP</b><p>工具结果回流上下文，继续决策。</p></div><div><b>05 · STOP</b><p>完成、失败或触发边界后结束。</p></div>
+  </div>
+  <div class="badge"><i></i> 自主不是模型突然“有意识”，而是程序给了它连续行动的闭环。</div>
+</div><div class="nav">08 / 20</div></section>
+
+<section class="slide"><div class="content">
+  <div class="kicker">08 · Framework</div><h2 class="title small">Agent Framework 是什么？</h2><div class="divider"></div>
+  <p class="lead">框架的价值，不是让模型变聪明，而是把 Agent 运行时里重复、复杂、容易出错的工程问题抽象掉。</p>
+  <div class="two-col">
+    <div class="card"><div class="card-num">LOW LEVEL</div><h3>自己造 Loop</h3><p>自己处理模型调用、工具 dispatch、状态、重试、终止条件和上下文。控制力最高，但工程成本也最高。</p></div>
+    <div class="card"><div class="card-num">FRAMEWORK</div><h3>复用 Agent Runtime</h3><p>把模型、工具、memory、handoff、guardrail、workflow 等常见能力封装成可组合组件。</p></div>
+  </div>
+</div><div class="nav">09 / 20</div></section>
+
+<section class="slide"><div class="content">
+  <div class="kicker">09 · Framework Landscape</div><h2 class="title small">常见 Agent 框架：定位不一样</h2><div class="divider"></div>
+  <div class="grid-5">
+    <div class="provider"><div class="brand"><div class="logo">LC</div>LANGCHAIN</div><h3>通用 LLM / Agent 开发</h3><p>提供模型、工具、Agent 与上层应用组件；适合快速搭建常见 Agent。</p></div>
+    <div class="provider"><div class="brand"><div class="logo">LG</div>LANGGRAPH</div><h3>图式编排 / 状态机</h3><p>更强调可控的状态、分支、持久化和长流程执行；适合需要精细编排的系统。</p></div>
+    <div class="provider"><div class="brand"><div class="logo">OA</div>OPENAI</div><h3>Agents SDK</h3><p>以少量核心原语构建 Agent，覆盖 tools、handoffs、guardrails、sessions、tracing 与 sandbox agents。</p></div>
+    <div class="provider"><div class="brand"><div class="logo">AG</div>AUTOGEN</div><h3>多 Agent / Runtime</h3><p>微软体系下的 Agent 框架，AgentChat 偏快速构建，多 Agent Core 偏事件驱动与可扩展 runtime。</p></div>
+    <div class="provider"><div class="brand"><div class="logo">CR</div>CREWAI</div><h3>Crew + Flow</h3><p>把自主协作团队与结构化、事件驱动的 Flow 组合起来，强调角色化 Agent 与工作流。</p></div>
+  </div>
+  <div class="source">资料依据：LangChain / LangGraph / OpenAI Agents SDK / Microsoft AutoGen / CrewAI 官方文档。</div>
+</div><div class="nav">10 / 20</div></section>
+
+<section class="slide"><div class="content">
+  <div class="kicker">10 · Framework Choice</div><h2 class="title small">选框架，本质是在选择“你想把控制权放在哪里”</h2><div class="divider"></div>
+  <div class="axis">
+    <div class="item"><b>HIGH ABSTRACTION</b><p>快速把一个任务变成可用 Agent。少写 runtime 代码，多利用框架默认行为。</p></div>
+    <div class="item"><b>CONTROL</b><p>自己定义状态、路由、重试、并发、checkpoint、human-in-loop 等细节。</p></div>
+    <div class="item"><b>DOMAIN</b><p>数据型应用偏 LlamaIndex；多 Agent 偏 AutoGen / CrewAI；OpenAI 体系则可以直接使用 Agents SDK。</p></div>
+  </div>
+  <p class="note">因此没有一个“最好框架”适合所有 Agent；更重要的是先明确任务复杂度和控制要求。</p>
+  <div class="source">LlamaIndex 也把 agents 与 workflows 结合，突出“在数据之上构建 Agent”的路径。</div>
+</div><div class="nav">11 / 20</div></section>
+
+<section class="slide"><div class="content">
+  <div class="kicker">11 · Agent Products</div><h2 class="title small">有哪些 Agent？先看“谁家的”</h2><div class="divider"></div>
+  <div class="agents">
+    <div class="agent"><div class="brand"><div class="logo">O</div>OPENAI · CODEX</div><h3>Codex</h3><p>OpenAI 的 coding agent。CLI / 云端 / IDE 等形态都围绕“理解仓库 → 改代码 → 跑命令 → 验证结果”工作，并支持 Skills 与多 Agent 工作流。</p></div>
+    <div class="agent"><div class="brand"><div class="logo">C</div>ANTHROPIC · CLAUDE</div><h3>Claude Code</h3><p>Anthropic 的终端 coding agent。直接进入项目环境，读取与修改文件、执行命令，并支持 MCP、权限模式与长会话工作流。</p></div>
+    <div class="agent"><div class="brand"><div class="logo">✦</div>GOOGLE · GEMINI</div><h3>Gemini CLI</h3><p>Google 的开源终端 Agent。面向本地项目、文件操作、Shell、MCP 和 Skills，强调 terminal-first 的工作方式。</p></div>
+    <div class="agent"><div class="brand"><div class="logo">CU</div>ANYSHP · CURSOR</div><h3>Cursor Agent</h3><p>编辑器与 CLI 中的 Agent。可搜索代码库、编辑多文件、运行终端，并提供 Agent / Ask / Manual 等模式。</p></div>
+    <div class="agent"><div class="brand"><div class="logo">DV</div>COGNITION · DEVIN</div><h3>Devin</h3><p>Cognition 的 AI software engineer。面向复杂工程任务、迁移、PR review、on-call 与长期任务，并逐渐扩展到本地 CLI 与云端协作。</p></div>
+    <div class="agent"><div class="brand"><div class="logo">OH</div>OPEN SOURCE · OPENHANDS</div><h3>OpenHands</h3><p>开源的软件开发 Agent 方向，强调可执行的开发工作流，可围绕代码、工具与 workspace 运行。</p></div>
+  </div>
+  <div class="source">这里的分类是“代表性产品”，不是能力排名。你原提纲中的 DSH 未找到足够明确的官方对应产品，因此没有擅自把它等同于某一个 Agent。</div>
+</div><div class="nav">12 / 20</div></section>
+
+<section class="slide"><div class="content">
+  <div class="kicker">12 · Agent Anatomy</div><h2 class="title small">为什么这些产品看起来很像？</h2><div class="divider"></div>
+  <div class="flow">
+    <div class="box"><b>MODEL</b><span>负责理解、推理、决定下一步</span></div><div class="box"><b>HARNESS</b><span>负责规则、上下文、权限、状态</span></div><div class="box"><b>TOOLS</b><span>负责读写文件、Shell、搜索、网络</span></div><div class="box"><b>WORKSPACE</b><span>负责真正产生副作用的环境</span></div>
+  </div>
+  <p class="lead">真正决定 Agent 好不好用的，不只有模型本身，还有包在模型外面的 <span class="emph">harness</span>。</p>
+  <div class="source">OpenAI 对 Codex 的工程文章把 harness 描述为协调 user、model 与 tools 的 agent loop；Cursor 也将 Agent 概括为 model + tools + harness。</div>
+</div><div class="nav">13 / 20</div></section>
+
+<section class="slide"><div class="content">
+  <div class="kicker">13 · MCP</div><h2 class="title small">MCP：把外部能力接进 Agent</h2><div class="divider"></div>
+  <div class="flow">
+    <div class="box"><b>Agent</b><span>负责选择下一步</span></div><div class="box"><b>MCP Server</b><span>暴露工具 / 资源</span></div><div class="box"><b>External System</b><span>GitHub · DB · SaaS · Search</span></div>
+  </div>
+  <div class="compare">
+    <div><h3>它扩展什么？</h3><p><span class="emph">能力边界</span>。让 Agent 接触模型自身无法直接访问的外部数据或操作。</p></div>
+    <div><h3>它带来什么成本？</h3><p><span class="emph">系统耦合</span>。接入越深，权限、认证、失败处理与安全边界就越需要工程化。</p></div>
+  </div>
+  <div class="source">MCP 官方规范将其定义为连接 AI applications 与外部数据源、工具及工作流的开放协议。</div>
+</div><div class="nav">14 / 20</div></section>
+
+<section class="slide"><div class="content">
+  <div class="kicker">14 · Skills</div><h2 class="title small">Skills：把知识和流程变成可复用资产</h2><div class="divider"></div>
+  <div class="two-col">
+    <div class="card"><div class="card-num">KNOWLEDGE</div><h3>Markdown / Rules</h3><p>把背景、规范、最佳实践、边界条件和判断标准写下来，让 Agent 可以在需要时读取。</p></div>
+    <div class="card"><div class="card-num">PROCEDURE</div><h3>Scripts / Workflow</h3><p>把重复动作固化成脚本和操作流程，减少每次都从零解释怎么做。</p></div>
+  </div>
+  <div class="badge"><i></i> Skill = Knowledge + Procedure + Optional Execution</div>
+  <p class="note">所以 Skills 很适合做“知识蒸馏”：不是训练模型，而是把经过验证的方法压缩成 Agent 可复用的上下文。</p>
+</div><div class="nav">15 / 20</div></section>
+
+<section class="slide"><div class="content">
+  <div class="kicker">15 · MCP vs Skills</div><h2 class="title small">一个偏“手”，一个偏“脑内操作手册”</h2><div class="divider"></div>
+  <div class="compare">
+    <div><h3>MCP</h3><p><span class="emph">接能力</span><br><br>把 GitHub、数据库、搜索、内部 SaaS 等外部系统接进 Agent。重点是“它能做什么”。</p></div>
+    <div><h3>Skills</h3><p><span class="emph">沉淀方法</span><br><br>把团队规范、流程、经验写给 Agent。重点是“它应该怎么做”。</p></div>
+  </div>
+  <p class="note">两者可以同时存在：Skill 告诉 Agent 规则，MCP 给 Agent 工具。</p>
+</div><div class="nav">16 / 20</div></section>
+
+<section class="slide"><div class="content">
+  <div class="kicker">16 · Codex Workflow</div><h2 class="title small">如何高效使用 Agent？先看 Codex CLI</h2><div class="divider"></div>
+  <div class="terminal">
+    <span class="dim"># 进入项目</span><br>
+    <span class="cmd">$ cd my-project</span><br><br>
+    <span class="dim"># 让 Agent 先理解任务，再执行</span><br>
+    <span class="cmd">$ codex</span><br>
+    <span class="green">› 请先检查这个仓库的结构，定位认证模块，</span><br>
+    <span class="green">  然后把 session 校验重构为 middleware，并运行相关测试。</span><br><br>
+    <span class="dim"># 完成一个阶段后，主动整理上下文</span><br>
+    <span class="cmd">› /compact</span><br>
+    <span class="blue">✓ 保留：当前架构、已修改文件、测试结果、未完成任务</span>
+  </div>
+  <p class="note">核心不是“多写 Prompt”，而是让 Agent 长时间工作时始终保持干净、可恢复、可验证的上下文。</p>
+  <div class="source">Codex CLI 当前支持手动 /compact；OpenAI 官方文档同时介绍了 /init、/status、/permissions 等 CLI 工作方式。</div>
+</div><div class="nav">17 / 20</div></section>
+
+<section class="slide"><div class="content">
+  <div class="kicker">17 · Context Compaction</div><h2 class="title small">/compact：不是删除记忆，而是重建工作状态</h2><div class="divider"></div>
+  <div class="process">
+    <div><b>RAW</b><p>大量聊天、命令、文件和失败尝试。</p></div><div><b>SELECT</b><p>找出仍然影响下一步的事实。</p></div><div><b>SUMMARIZE</b><p>把过程压成高密度状态。</p></div><div><b>CONTINUE</b><p>以新的上下文继续任务。</p></div><div><b>VERIFY</b><p>检查 Agent 是否还记得关键约束。</p></div>
+  </div>
+  <div class="badge"><i></i> 长任务效率的关键：让 Context 与任务阶段同步变化</div>
+  <div class="source">Codex 社区 issue / CLI 实现记录了 /compact 用于手动压缩会话上下文；具体行为可能随 CLI 版本演进。</div>
+</div><div class="nav">18 / 20</div></section>
+
+<section class="slide"><div class="content">
+  <div class="kicker">18 · Project Entry + Sub-Agent</div><h2 class="title small">两个高级技巧：让 Agent 更像“项目成员”</h2><div class="divider"></div>
+  <div class="two-col">
+    <div class="card"><div class="card-num">01 · PROJECT ENTRY</div><h3>初始化项目入口</h3><p>用 <strong>AGENTS.md</strong> / rules / skills 写清技术栈、目录边界、验证方式、禁止事项和工作习惯，让 Agent 每次进入项目都有共同起点。</p></div>
+    <div class="card"><div class="card-num">02 · SUB-AGENT</div><h3>拆分专门代理</h3><p>主 Agent 负责拆任务和汇总；Research、Coding、Review 等子代理各自拥有更窄的职责和上下文。</p></div>
+  </div>
+  <div class="command-grid">
+    <div class="command"><code>/init</code><p>在 Codex CLI 中初始化项目指令文件入口。</p></div>
+    <div class="command"><code>AGENTS.md</code><p>把项目长期约定从聊天记录中抽离出来。</p></div>
+    <div class="command"><code>Sub-Agent</code><p>减少单个上下文的复杂度，让不同角色并行或串行工作。</p></div>
+  </div>
+  <div class="source">Codex 官方文档说明 CLI 会自动发现并注入 AGENTS.md；OpenAI Agents SDK 与 LangChain 等也都提供 handoff / subagent 等多 Agent 编排方式。</div>
+</div><div class="nav">19 / 20</div></section>
+
+<section class="slide"><div class="content">
+  <div class="kicker">19 · Final</div><h2 class="title">从 ChatBox 到 Agent</h2><div class="divider"></div>
+  <div class="process">
+    <div><b>CHAT</b><p>模型回答问题</p></div><div><b>CONTEXT</b><p>管理模型知道什么</p></div><div><b>TOOLS</b><p>让模型能够行动</p></div><div><b>LOOP</b><p>让行动形成闭环</p></div><div><b>ENGINEERING</b><p>让系统稳定工作</p></div>
+  </div>
+  <p class="lead">真正高效使用 Agent，不是追求更多工具，而是让 <span class="emph">目标、上下文、工具、权限、流程与验证</span> 形成稳定系统。</p>
+  <div class="note">Model 是引擎；Agent 是整车；Harness、Context 与 Tools 决定它能不能真正上路。</div>
+</div><div class="nav">20 / 20</div></section>
+
+</div>
+<div class="hint" id="hint">← → 翻页 · Space 下一页 · A 全屏 · Esc 退出</div>
+<script>
+(() => {
+  const slides=[...document.querySelectorAll('.slide')];
+  let current=0,busy=false;
+  const hint=document.getElementById('hint');
+  const update=()=>slides.forEach((s,i)=>s.classList.toggle('active',i===current));
+  const go=(i)=>{if(i<0||i>=slides.length||i===current||busy)return;busy=true;current=i;update();setTimeout(()=>busy=false,650)};
+  const next=()=>go(current+1),prev=()=>go(current-1);
+  function fullscreen(){if(!document.fullscreenElement)document.documentElement.requestFullscreen?.().catch(()=>{});else document.exitFullscreen?.()}
+  document.addEventListener('keydown',e=>{
+    if(e.target.matches('input,textarea'))return;
+    if(['ArrowRight','ArrowDown','PageDown',' '].includes(e.key)){e.preventDefault();next()}
+    else if(['ArrowLeft','ArrowUp','PageUp'].includes(e.key)){e.preventDefault();prev()}
+    else if(e.key.toLowerCase()==='a'){e.preventDefault();fullscreen()}
+  });
+  let sx=0,sy=0;const vp=document.getElementById('viewport');
+  vp.addEventListener('touchstart',e=>{sx=e.changedTouches[0].clientX;sy=e.changedTouches[0].clientY},{passive:true});
+  vp.addEventListener('touchend',e=>{const dx=sx-e.changedTouches[0].clientX,dy=sy-e.changedTouches[0].clientY;if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy))dx>0?next():prev()},{passive:true});
+  let ht;const showHint=()=>{hint.classList.add('show');clearTimeout(ht);ht=setTimeout(()=>hint.classList.remove('show'),3500)};
+  update();showHint();
+})();
+</script>
+</body>
+</html>
